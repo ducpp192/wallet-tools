@@ -1,0 +1,44 @@
+# Environment / secrets — NEVER commit real keys
+.env
+_0.env
+*.env
+.env.local
+.env.*.local
+
+# Logs — runtime data
+logs/
+*.log
+*.log.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+
+# Node (if any)
+node_modules/
+
+# Claude Code
+.claude/launch.json

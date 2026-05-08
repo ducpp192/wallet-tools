@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crypto Dashboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0d0d0d; color: #e0e0e0; font-family: 'Segoe UI', monospace; min-height: 100vh; }
+
+/* ===== NAV TABS ===== */
+.nav {
+  background: #111; border-bottom: 1px solid #222;
+  display: flex; align-items: center; padding: 0 24px; gap: 4px;
+}
+.nav-brand { color: #00d4ff; font-weight: 700; font-size: 15px; padding: 16px 16px 16px 0; margin-right: 12px; border-right: 1px solid #222; }
+.tab-btn {
+  padding: 16px 20px; font-size: 13px; color: #666; background: none;
+  border: none; cursor: pointer; border-bottom: 2px solid transparent;
+  transition: all 0.2s; white-space: nowrap;
+}
+.tab-btn:hover { color: #aaa; }
+.tab-btn.active { color: #00d4ff; border-bottom-color: #00d4ff; }
+
+.tab-pane { display: none; padding: 24px 30px; max-width: 1500px; margin: 0 auto; }
+.tab-pane.active { display: block; }
+
+/* ===== SHARED COMPONENTS ===== */
+.panel {
+  background: #141414; border: 1px solid #2a2a2a; border-radius: 10px; padding: 20px; margin-bottom: 20px;
+}
+.panel-title { font-size: 12px; color: #555; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; }
+textarea {
+  width: 100%; background: #0d0d0d; border: 1px solid #333; border-radius: 6px;
+  color: #e0e0e0; font-size: 12px; padding: 10px; font-family: monospace; resize: vertical; outline: none;
+}
+textarea:focus { border-color: #00d4ff; }
+input[type=number], input[type=text], select {
+  background: #0d0d0d; border: 1px solid #333; border-radius: 4px;
+  color: #e0e0e0; padding: 6px 10px; font-size: 12px; outline: none;
+}
+input:focus, select:focus { border-color: #00d4ff; }
+
+.row { display: flex; gap: 16px; align-items: flex-start; }
+.col { flex: 1; }
+.controls { display: flex; flex-direction: column; gap: 10px; min-width: 220px; }
+.ctrl-label { font-size: 11px; color: #666; margin-bottom: 5px; }
+
+.net-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.net-btn {
+  padding: 5px 12px; border-radius: 20px; border: 1px solid #333;
+  background: #1a1a1a; color: #666; font-size: 12px; cursor: pointer; transition: all 0.2s;
+}
+.net-btn.active { border-color: #00d4ff; background: #00d4ff22; color: #00d4ff; }
+
+.btn { padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; }
+.btn-primary { background: linear-gradient(135deg,#00d4ff,#0099cc); color: #000; width: 100%; font-size: 14px; padding: 12px; }
+.btn-primary:hover { opacity: 0.85; }
+.btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-green  { background: #1a3a1a; color: #4caf50; border: 1px solid #4caf50; }
+.btn-green:hover { background: #4caf5022; }
+.btn-green:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn-gray   { background: #1a1a1a; color: #888; border: 1px solid #333; }
+.btn-gray:hover { border-color: #666; color: #ccc; }
+
+/* ===== STATS ===== */
+.stats-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.stat-box { background: #141414; border: 1px solid #2a2a2a; border-radius: 8px; padding: 12px 16px; min-width: 130px; }
+.stat-box .val { font-size: 22px; font-weight: 700; color: #00d4ff; }
+.stat-box .lbl { font-size: 11px; color: #555; margin-top: 2px; }
+
+/* ===== PROGRESS ===== */
+.progress-bar { background: #1a1a1a; border-radius: 4px; height: 4px; margin-bottom: 8px; overflow: hidden; display: none; }
+.progress-fill { height: 100%; background: linear-gradient(90deg,#00d4ff,#0099cc); transition: width 0.3s; }
+.progress-text { font-size: 12px; color: #666; margin-bottom: 12px; display: none; }
+
+/* ===== TABLE ===== */
+.toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+.toolbar-label { font-size: 12px; color: #555; flex: 1; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  background: #1a1a1a; color: #666; font-size: 11px; font-weight: 600;
+  padding: 9px 12px; text-align: left; border-bottom: 1px solid #2a2a2a; white-space: nowrap; cursor: pointer;
+}
+thead th:hover { color: #00d4ff; }
+tbody tr { border-bottom: 1px solid #161616; transition: background 0.1s; }
+tbody tr:hover { background: #141414; }
+tbody td { padding: 9px 12px; vertical-align: middle; }
+.no-data { text-align: center; padding: 50px; color: #333; font-size: 14px; }
+
+/* ===== TAGS & STYLES ===== */
+.tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+.tag-base  { background: #0033ff22; color: #4499ff; border: 1px solid #4499ff44; }
+.tag-avax  { background: #ff000022; color: #ff6644; border: 1px solid #ff664444; }
+.tag-eth   { background: #55555522; color: #aaa;    border: 1px solid #55555544; }
+
+.addr { font-family: monospace; font-size: 11px; color: #555; cursor: pointer; }
+.addr:hover { color: #00d4ff; }
+.link-icon { font-size: 11px; color: #444; text-decoration: none; margin-left: 4px; }
+.link-icon:hover { color: #00d4ff; }
+
+.weth-high { color: #00e676; font-weight: 700; }
+.weth-mid  { color: #ffeb3b; font-weight: 700; }
+.weth-low  { color: #ff5722; font-weight: 700; }
+
+.status-ok      { color: #00e676; font-size: 11px; }
+.status-err     { color: #ff5722; font-size: 11px; }
+.status-loading { color: #ffeb3b; font-size: 11px; }
+.status-empty   { color: #555;    font-size: 11px; }
+
+.val-usd { color: #888; font-size: 12px; }
+.val-green { color: #00e676; }
+.val-gray  { color: #666; }
+
+.search-input { padding: 6px 10px; width: 200px; }
+
+/* ===== HOLDINGS SPECIFIC ===== */
+.wallet-header {
+  background: #1a1a2e; padding: 6px 12px; font-size: 12px;
+  color: #4499ff; font-family: monospace;
+}
+tr.wallet-row td { background: #111827; color: #4499ff; font-size: 11px; font-weight: 600; }
+
+.token-logo { width: 20px; height: 20px; border-radius: 50%; vertical-align: middle; margin-right: 6px; background: #333; }
+
+/* Dropdown API key */
+.api-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.api-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #00e67622; color: #00e676; }
+
+/* Group toggle */
+.group-btn { padding: 5px 12px; border-radius: 4px; border: 1px solid #333; background: #1a1a1a; color: #888; font-size: 11px; cursor: pointer; }
+.group-btn.active { border-color: #00d4ff; color: #00d4ff; background: #00d4ff11; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="nav-brand">⚡ CryptoDash</div>
+  <button class="tab-btn active" onclick="switchTab('lp', this)">🔍 LP Checker</button>
+  <button class="tab-btn" onclick="switchTab('holdings', this)">👛 Wallet Holdings</button>
+</div>
+
+<!-- ==================== TAB 1: LP CHECKER ==================== -->
+<div class="tab-pane active" id="tab-lp">
+
+  <div class="panel">
+    <div class="row">
+      <div class="col">
+        <div class="ctrl-label">📋 Dán contract address (mỗi dòng 1 token)</div>
+        <textarea id="lp-input" rows="7" placeholder="0xabc123...&#10;0xdef456...&#10;0x789abc..."></textarea>
+      </div>
+      <div class="controls">
+        <div>
+          <div class="ctrl-label">Network</div>
+          <div class="net-btns">
+            <button class="net-btn active" data-net="base" onclick="lpToggleNet(this)">🔵 Base</button>
+            <button class="net-btn active" data-net="avalanche" onclick="lpToggleNet(this)">🔺 Avax</button>
+          </div>
+        </div>
+        <div>
+          <div class="ctrl-label">Min WETH/WAVAX</div>
+          <input type="number" id="lp-minWeth" value="0" step="0.01" style="width:100px"> ETH/AVAX
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <span id="lp-server-status" style="font-size:11px;color:#ff5722">🔴 Server chưa chạy</span>
+          <button onclick="checkServer()" style="font-size:10px;padding:3px 8px;background:#1a1a1a;border:1px solid #333;border-radius:4px;color:#888;cursor:pointer">↻</button>
+        </div>
+        <button class="btn btn-primary" id="lp-btnCheck" onclick="lpRunCheck()">⚡ CHECK LP</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-green" id="lp-btnCsv" onclick="lpExportCSV()" disabled>📥 CSV</button>
+          <button class="btn btn-gray" onclick="lpClear()">🗑 Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-box"><div class="val" id="lp-s1">0</div><div class="lbl">Tokens</div></div>
+    <div class="stat-box"><div class="val" id="lp-s2">0</div><div class="lbl">Pairs found</div></div>
+    <div class="stat-box"><div class="val" id="lp-s3">0.00</div><div class="lbl">Total WETH</div></div>
+    <div class="stat-box"><div class="val" id="lp-s4">0.00</div><div class="lbl">Total WAVAX</div></div>
+    <div class="stat-box"><div class="val" id="lp-s5">$0</div><div class="lbl">Total LP USD</div></div>
+  </div>
+
+  <div class="progress-text" id="lp-ptext"></div>
+  <div class="progress-bar" id="lp-pbar"><div class="progress-fill" id="lp-pfill" style="width:0%"></div></div>
+
+  <div class="toolbar">
+    <div class="toolbar-label" id="lp-tlabel">Nhập token address và bấm CHECK</div>
+    <select onchange="lpSortTable()" id="lp-sort" style="font-size:12px;padding:5px 8px">
+      <option value="weth_desc">WETH/WAVAX ↓</option>
+      <option value="weth_asc">WETH/WAVAX ↑</option>
+      <option value="usd_desc">USD ↓</option>
+    </select>
+  </div>
+  <div class="table-wrap">
+    <table id="lp-table">
+      <thead><tr>
+        <th>#</th><th>Token</th><th>Network</th><th>DEX</th><th>Pair</th>
+        <th>WETH/WAVAX (amt · USD)</th><th>Liq USD</th><th>Price</th><th>Vol 24h</th><th>Status</th>
+      </tr></thead>
+      <tbody id="lp-tbody">
+        <tr><td colspan="11" class="no-data">⬆ Dán địa chỉ token và bấm CHECK</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== TAB 2: WALLET HOLDINGS ==================== -->
+<div class="tab-pane" id="tab-holdings">
+
+  <div class="panel">
+    <div class="row">
+      <div class="col">
+        <div class="ctrl-label">👛 Dán wallet address (mỗi dòng 1 ví, tối đa 1000)</div>
+        <textarea id="h-wallets" rows="8" placeholder="0x24ACDd7c33bC12893A598A6c0060DBe236400506&#10;0xabc...&#10;0xdef..."></textarea>
+      </div>
+      <div class="controls">
+        <div>
+          <div class="ctrl-label">Network</div>
+          <div class="net-btns">
+            <button class="net-btn active" data-net="base" onclick="hToggleNet(this)">🔵 Base</button>
+            <button class="net-btn active" data-net="avalanche" onclick="hToggleNet(this)">🔺 Avax</button>
+          </div>
+        </div>
+        <div>
+          <div class="ctrl-label">API Provider <span class="api-badge">FREE</span></div>
+          <select id="h-provider" style="width:100%" onchange="hProviderChange()">
+            <option value="blockscout">Blockscout ⭐ FREE (no key)</option>
+            <option value="covalent">Covalent (API key)</option>
+            <option value="moralis">Moralis (API key)</option>
+            <option value="ankr">Ankr (API key)</option>
+          </select>
+        </div>
+        <div id="h-apikey-wrap">
+          <div class="ctrl-label">
+            API Key
+            <a id="h-key-link" href="https://goldrush.covalenthq.com" target="_blank"
+               style="color:#00d4ff;font-size:10px;margin-left:6px">Lấy free key ↗</a>
+          </div>
+          <input type="text" id="h-apikey" placeholder="Dán API key vào đây..." style="width:100%">
+        </div>
+        <div>
+          <div class="ctrl-label">Min value (USD)</div>
+          <input type="number" id="h-minusd" value="0" step="1" style="width:100px"> USD
+        </div>
+        <div>
+          <div class="ctrl-label">Group by</div>
+          <div style="display:flex;gap:6px">
+            <button class="group-btn active" id="grp-wallet" onclick="hSetGroup('wallet',this)">Wallet</button>
+            <button class="group-btn" id="grp-token" onclick="hSetGroup('token',this)">Token</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span id="h-server-status" style="font-size:11px;color:#ff5722">🔴 Server chưa chạy</span>
+          <button onclick="checkServer()" style="font-size:10px;padding:3px 8px;background:#1a1a1a;border:1px solid #333;border-radius:4px;color:#888;cursor:pointer">↻ Check</button>
+        </div>
+        <button class="btn btn-primary" id="h-btnCheck" onclick="hRunCheck()">⚡ SCAN HOLDINGS</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-green" id="h-btnCsv" onclick="hExportCSV()" disabled>📥 CSV</button>
+          <button class="btn btn-gray" onclick="hClear()">🗑 Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-box"><div class="val" id="h-s1">0</div><div class="lbl">Wallets scanned</div></div>
+    <div class="stat-box"><div class="val" id="h-s2">0</div><div class="lbl">Unique tokens</div></div>
+    <div class="stat-box"><div class="val" id="h-s3">0</div><div class="lbl">Total holdings</div></div>
+    <div class="stat-box"><div class="val" id="h-s4">$0</div><div class="lbl">Portfolio USD</div></div>
+    <div class="stat-box"><div class="val" id="h-s5">0</div><div class="lbl">Wallets có holdings</div></div>
+  </div>
+
+  <div class="progress-text" id="h-ptext"></div>
+  <div class="progress-bar" id="h-pbar"><div class="progress-fill" id="h-pfill" style="width:0%"></div></div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-label" id="h-tlabel">Dán địa chỉ ví và bấm SCAN</div>
+    <input class="search-input" type="text" placeholder="🔍 Search token/wallet..." oninput="hSearch(this.value)">
+    <select onchange="hSort(this.value)" style="font-size:12px;padding:5px 8px">
+      <option value="usd_desc">Value USD ↓</option>
+      <option value="usd_asc">Value USD ↑</option>
+      <option value="name_asc">Token A→Z</option>
+      <option value="balance_desc">Balance ↓</option>
+    </select>
+    <button class="btn btn-gray" onclick="hFilterNonZero()" id="h-filter-btn" style="font-size:11px;padding:6px 12px">Hide $0</button>
+  </div>
+
+  <div class="table-wrap">
+    <table id="h-table">
+      <thead><tr>
+        <th>#</th>
+        <th>Wallet</th>
+        <th>Network</th>
+        <th>Token</th>
+        <th>Contract</th>
+        <th>Balance</th>
+        <th>Price USD</th>
+        <th>Value USD</th>
+        <th>% Portfolio</th>
+        <th>Status</th>
+      </tr></thead>
+      <tbody id="h-tbody">
+        <tr><td colspan="10" class="no-data">⬆ Dán địa chỉ ví và bấm SCAN HOLDINGS</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== SCRIPTS ==================== -->
+<script>
+// ======= TAB SWITCH =======
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// ======= HELPERS =======
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function fmt(n, d=4) {
+  if (n == null || isNaN(n)) return '-';
+  if (n >= 1e9) return (n/1e9).toFixed(2)+'B';
+  if (n >= 1e6) return (n/1e6).toFixed(2)+'M';
+  if (n >= 1e3) return (n/1e3).toFixed(2)+'K';
+  return parseFloat(n).toFixed(d);
+}
+function fmtUSD(n) {
+  if (!n || isNaN(n)) return '$0';
+  if (n >= 1e6) return '$'+(n/1e6).toFixed(2)+'M';
+  if (n >= 1e3) return '$'+(n/1e3).toFixed(1)+'K';
+  return '$'+n.toFixed(2);
+}
+function short(addr) { return addr ? addr.slice(0,6)+'…'+addr.slice(-4) : ''; }
+function copy(addr) { navigator.clipboard.writeText(addr).catch(()=>{}); }
+function parseAddrs(raw) {
+  return [...new Set(
+    raw.split(/[\n,;\s]+/).map(s=>s.trim()).filter(s=>/^0x[0-9a-fA-F]{40}$/.test(s))
+  )];
+}
+
+// ======= CSV EXPORT =======
+function downloadCSV(rows, filename) {
+  if (!rows.length) return;
+  const headers = Object.keys(rows[0]);
+  const csv = [headers.join(','), ...rows.map(r =>
+    headers.map(h => `"${(r[h]??'').toString().replace(/"/g,'""')}"`).join(',')
+  )].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8'}));
+  a.download = filename;
+  a.click();
+}
+
+// ============================================================
+// ===== TAB 1: LP CHECKER ====================================
+// ============================================================
+// DexScreener API v2 (new endpoint per chain)
+const DS_V2 = 'https://api.dexscreener.com/token-pairs/v1';
+const DS_CHAIN = { base:'base', avalanche:'avalanche' };
+let lpNets = new Set(['base','avalanche']);
+let lpResults = [];
+let ethPrice = 2500, avaxPrice = 25; // fallback, sẽ fetch thực tế
+
+// Fetch giá ETH/AVAX qua server proxy để tránh CORS
+async function fetchNativePrices() {
+  try {
+    const [ethR, avaxR] = await Promise.all([
+      fetch(SERVER + '/pairs', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ address:'0x4200000000000000000000000000000000000006', chains:['base'] })
+      }),
+      fetch(SERVER + '/pairs', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ address:'0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7', chains:['avalanche'] })
+      })
+    ]);
+    const ethD  = await ethR.json();
+    const avaxD = await avaxR.json();
+    const ethPairs  = ethD.pairs  || [];
+    const avaxPairs = avaxD.pairs || [];
+    if (ethPairs[0]?.priceUsd)  ethPrice  = parseFloat(ethPairs[0].priceUsd);
+    if (avaxPairs[0]?.priceUsd) avaxPrice = parseFloat(avaxPairs[0].priceUsd);
+    console.log(`ETH=$${ethPrice}, AVAX=$${avaxPrice}`);
+  } catch(e) { console.warn('Price fetch failed, using fallback', e); }
+}
+
+function lpToggleNet(btn) {
+  const n = btn.dataset.net;
+  lpNets.has(n) ? (lpNets.delete(n), btn.classList.remove('active')) : (lpNets.add(n), btn.classList.add('active'));
+}
+
+const NATIVE_WRAP = { base: ['WETH','ETH'], avalanche: ['WAVAX','AVAX'] };
+const NATIVE_PRICE = () => ({ base: ethPrice, avalanche: avaxPrice });
+
+function getWethInfo(pair) {
+  const q    = pair.quoteToken||{};
+  const b    = pair.baseToken||{};
+  const nets = NATIVE_WRAP[pair.chainId]||[];
+  const liq  = pair.liquidity||{};
+  const nativePrice = NATIVE_PRICE()[pair.chainId] || ethPrice;
+  const totalLiqUSD = parseFloat(liq.usd)||0;
+
+  const qN = nets.some(s => q.symbol?.toUpperCase()===s);
+  const bN = nets.some(s => b.symbol?.toUpperCase()===s);
+
+  // DexScreener v2: liq.base/quote là TOKEN AMOUNT (không phải USD!)
+  // WETH/WAVAX amount được lấy trực tiếp, USD = amount * nativePrice
+  if (qN) {
+    // WETH/WAVAX là quote token → liq.quote = số lượng WETH/WAVAX
+    const wethAmt = parseFloat(liq.quote)||0 || (totalLiqUSD/2/nativePrice);
+    const wethUSD = wethAmt * nativePrice;
+    return { wethSymbol:q.symbol, wethUSD, wethAmt, tokenSymbol:b.symbol };
+  }
+  if (bN) {
+    // WETH/WAVAX là base token → liq.base = số lượng WETH/WAVAX
+    const wethAmt = parseFloat(liq.base)||0 || (totalLiqUSD/2/nativePrice);
+    const wethUSD = wethAmt * nativePrice;
+    return { wethSymbol:b.symbol, wethUSD, wethAmt, tokenSymbol:q.symbol };
+  }
+  // Pair không có WETH (e.g. TOKEN/USDC) → ước tính 50% liq
+  return { wethSymbol: q.symbol||'?', wethUSD: totalLiqUSD/2, wethAmt: null, tokenSymbol: b.symbol };
+}
+
+async function fetchPairsForToken(tok) {
+  // Bước 1: On-chain check (chính xác, không phụ thuộc DexScreener index)
+  try {
+    const r = await fetch(SERVER + '/lp', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        token: tok,
+        networks: [...lpNets],
+        eth_price: ethPrice,
+        avax_price: avaxPrice
+      })
+    });
+    const d = await r.json();
+    const pools = d.pools || [];
+    console.log(`[LP on-chain] ${tok.slice(0,10)}... → ${pools.length} pools`);
+
+    if (!pools.length) return [];
+
+    // Bước 2: Thử lấy thêm price/vol từ DexScreener (optional, không bắt buộc)
+    let dsPairs = [];
+    try {
+      const r2 = await fetch(SERVER + '/pairs', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ address: tok, chains: [...lpNets] })
+      });
+      const d2 = await r2.json();
+      dsPairs = d2.pairs || [];
+    } catch(e) {}
+
+    // Bước 3: Convert on-chain pool → pair format cho table
+    return pools.map(pool => {
+      // Match với DexScreener pair cùng địa chỉ (nếu có)
+      const ds = dsPairs.find(p =>
+        p.pairAddress?.toLowerCase() === pool.pair_address?.toLowerCase()
+      ) || dsPairs.find(p => p.chainId === pool.network && p.dexId?.toLowerCase().includes(pool.dex?.toLowerCase().split(' ')[0]));
+
+      return {
+        chainId:    pool.network,
+        dexId:      pool.dex,
+        pairAddress: pool.pair_address,
+        baseToken:  ds?.baseToken  || { symbol: tok.slice(0,8), name: tok.slice(0,8) },
+        quoteToken: { symbol: pool.weth_symbol, address: NATIVE_TOKEN[pool.network] },
+        liquidity:  {
+          usd:   pool.liq_usd,
+          quote: pool.weth_amt,   // WETH amount on-chain (chính xác)
+          base:  0,
+        },
+        priceUsd:  ds?.priceUsd  || '0',
+        volume:    ds?.volume    || {},
+        _onchain:  true,
+      };
+    });
+  } catch(e) {
+    console.error('fetchLP error:', e);
+    return [];
+  }
+}
+
+// Map network → WETH/WAVAX address (dùng cho on-chain)
+const NATIVE_TOKEN = {
+  base:      '0x4200000000000000000000000000000000000006',
+  avalanche: '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7',
+};
+
+function lpBuildRow(i, tok, pair, status, err) {
+  if (status==='loading') return `<tr id="lp-row-${i}"><td>${i}</td><td colspan="9"><span class="status-loading">⏳ ${short(tok)}</span></td><td></td></tr>`;
+  if (status==='error')   return `<tr id="lp-row-${i}" style="opacity:0.4"><td>${i}</td><td><span class="addr" onclick="copy('${tok}')">${short(tok)}</span></td><td colspan="8">—</td><td><span class="status-err">❌ ${err||'no data'}</span></td></tr>`;
+  const {wethSymbol, wethUSD, wethAmt, tokenSymbol} = getWethInfo(pair);
+  const liqUSD = pair.liquidity?.usd||0;
+  const price  = pair.priceUsd||0;
+  const vol    = pair.volume?.h24||0;
+  const wc     = wethUSD>=1000?'weth-high': wethUSD>=100?'weth-mid':'weth-low';
+  const netTag = pair.chainId==='base'?'tag-base':'tag-avax';
+  const netLbl = pair.chainId==='base'?'🔵 Base':'🔺 Avax';
+  const dsLink = `https://dexscreener.com/${pair.chainId}/${pair.pairAddress}`;
+  const bt     = pair.baseToken||{};
+  const wethDisplay = wethAmt!=null ? `${fmt(wethAmt,3)} ${wethSymbol}` : `${fmtUSD(wethUSD)} (est)`;
+  return `<tr id="lp-row-${i}">
+    <td style="color:#555;font-size:11px">${i}</td>
+    <td>
+      <div style="font-weight:600">${bt.name||tokenSymbol||'?'}</div>
+      <div style="color:#666;font-size:11px">${bt.symbol||''}</div>
+      <div><span class="addr" onclick="copy('${tok}')" title="${tok}">${short(tok)}</span></div>
+    </td>
+    <td><span class="tag ${netTag}">${netLbl}</span></td>
+    <td style="color:#9c27b0;font-size:11px">${pair.dexId||''}</td>
+    <td>
+      <div style="font-size:11px;color:#666">${tokenSymbol||'?'}/${wethSymbol}</div>
+      <div><span class="addr" onclick="copy('${pair.pairAddress||''}')">${short(pair.pairAddress)}</span><a class="link-icon" href="${dsLink}" target="_blank">↗</a></div>
+    </td>
+    <td><span class="${wc}">${wethDisplay}</span><div style="color:#444;font-size:10px">${fmtUSD(wethUSD)}</div></td>
+    <td class="val-usd">${fmtUSD(liqUSD)}</td>
+    <td style="color:#666;font-size:12px">$${parseFloat(price)||0 > 0 ? parseFloat(price).toExponential(2) : '-'}</td>
+    <td style="color:#666;font-size:12px">${fmtUSD(vol)}</td>
+    <td><span class="status-ok">✓</span></td>
+  </tr>`;
+}
+
+async function lpRunCheck() {
+  const tokens = parseAddrs(document.getElementById('lp-input').value);
+  if (!tokens.length) { alert('Không có địa chỉ hợp lệ!'); return; }
+  if (!lpNets.size)   { alert('Chọn ít nhất 1 network!'); return; }
+  const minW = parseFloat(document.getElementById('lp-minWeth').value)||0;
+
+  lpResults = [];
+  document.getElementById('lp-btnCheck').disabled = true;
+  document.getElementById('lp-btnCsv').disabled = true;
+  document.getElementById('lp-pbar').style.display = 'block';
+  document.getElementById('lp-ptext').style.display = 'block';
+  document.getElementById('lp-ptext').textContent = 'Đang fetch giá ETH/AVAX...';
+
+  await fetchNativePrices();
+
+  const tbody = document.getElementById('lp-tbody');
+  tbody.innerHTML = tokens.map((t,i)=>lpBuildRow(i+1,t,null,'loading')).join('');
+
+  let totalW=0, totalWA=0, totalUSD=0, found=0;
+
+  for (let i=0;i<tokens.length;i++) {
+    const tok = tokens[i];
+    const pct = Math.round((i+1)/tokens.length*100);
+    document.getElementById('lp-pfill').style.width = pct+'%';
+    document.getElementById('lp-ptext').textContent = `${i+1}/${tokens.length}: ${short(tok)}`;
+
+    try {
+      const pairs = await fetchPairsForToken(tok);
+
+      if (!pairs.length) {
+        document.getElementById(`lp-row-${i+1}`).outerHTML = lpBuildRow(i+1,tok,null,'error','No pairs');
+        continue;
+      }
+
+      const best = pairs.sort((a,b)=>(b.liquidity?.usd||0)-(a.liquidity?.usd||0))[0];
+      const {wethAmt, wethUSD} = getWethInfo(best);
+      const wethVal = wethAmt ?? wethUSD/ethPrice;
+      if (minW>0 && wethVal < minW) {
+        document.getElementById(`lp-row-${i+1}`).outerHTML = lpBuildRow(i+1,tok,null,'error',`WETH < ${minW}`);
+        continue;
+      }
+
+      found++;
+      const liq = best.liquidity?.usd||0;
+      totalUSD += liq;
+      if (best.chainId==='base')      totalW  += wethAmt||0;
+      else if (best.chainId==='avalanche') totalWA += wethAmt||0;
+
+      document.getElementById(`lp-row-${i+1}`).outerHTML = lpBuildRow(i+1,tok,best,'ok');
+
+      lpResults.push({
+        no:i+1, address:tok,
+        name: best.baseToken?.name||'', symbol: best.baseToken?.symbol||'',
+        network: best.chainId, dex: best.dexId, pair_address: best.pairAddress||'',
+        weth_amt: (wethAmt??'').toString(), weth_usd: wethUSD.toFixed(2),
+        weth_symbol: getWethInfo(best).wethSymbol||'',
+        liq_usd: liq.toFixed(2), price_usd: best.priceUsd||'', vol_24h: best.volume?.h24||'',
+        dexscreener: `https://dexscreener.com/${best.chainId}/${best.pairAddress}`
+      });
+    } catch(e) {
+      document.getElementById(`lp-row-${i+1}`).outerHTML = lpBuildRow(i+1,tok,null,'error',e.message);
+    }
+
+    document.getElementById('lp-s1').textContent = i+1;
+    document.getElementById('lp-s2').textContent = found;
+    document.getElementById('lp-s3').textContent = fmt(totalW,3);
+    document.getElementById('lp-s4').textContent = fmt(totalWA,3);
+    document.getElementById('lp-s5').textContent = fmtUSD(totalUSD);
+
+    if (i<tokens.length-1) await sleep(300);
+  }
+
+  document.getElementById('lp-pbar').style.display='none';
+  document.getElementById('lp-ptext').textContent = `✅ Done! ${found}/${tokens.length} pairs found`;
+  document.getElementById('lp-btnCheck').disabled=false;
+  if (lpResults.length) document.getElementById('lp-btnCsv').disabled=false;
+  document.getElementById('lp-tlabel').textContent = `${found} pairs / ${tokens.length} tokens`;
+}
+
+function lpSortTable() {
+  const s=document.getElementById('lp-sort').value, tbody=document.getElementById('lp-tbody');
+  const rows=[...tbody.querySelectorAll('tr:not([style*="opacity"])').values()];
+  const errs=[...tbody.querySelectorAll('tr[style*="opacity"]').values()];
+  const getNum=(tr,col)=>parseFloat(tr.querySelectorAll('td')[col]?.textContent?.replace(/[^0-9.-]/g,'')||0)||0;
+  rows.sort((a,b)=>s==='weth_desc'?getNum(b,5)-getNum(a,5):s==='weth_asc'?getNum(a,5)-getNum(b,5):getNum(b,7)-getNum(a,7));
+  tbody.innerHTML=''; [...rows,...errs].forEach(r=>tbody.appendChild(r));
+}
+function lpExportCSV() { downloadCSV(lpResults, `lp_check_${Date.now()}.csv`); }
+function lpClear() {
+  document.getElementById('lp-input').value='';
+  document.getElementById('lp-tbody').innerHTML='<tr><td colspan="11" class="no-data">⬆ Dán địa chỉ token và bấm CHECK</td></tr>';
+  lpResults=[];
+  document.getElementById('lp-btnCsv').disabled=true;
+  ['lp-s1','lp-s2','lp-s3','lp-s4'].forEach(id=>document.getElementById(id).textContent='0');
+  document.getElementById('lp-s5').textContent='$0';
+  document.getElementById('lp-ptext').style.display='none';
+  document.getElementById('lp-pbar').style.display='none';
+}
+
+// ============================================================
+// ===== TAB 2: WALLET HOLDINGS ===============================
+// ============================================================
+let hNets = new Set(['base','avalanche']);
+let hResults = [];
+let hGroupBy = 'wallet';
+let hHideZero = false;
+
+function hToggleNet(btn) {
+  const n=btn.dataset.net;
+  hNets.has(n)?(hNets.delete(n),btn.classList.remove('active')):(hNets.add(n),btn.classList.add('active'));
+}
+function hProviderChange() {
+  const v = document.getElementById('h-provider').value;
+  const wrap  = document.getElementById('h-apikey-wrap');
+  const linkEl = document.getElementById('h-key-link');
+  const links = {
+    covalent:   { href:'https://goldrush.covalenthq.com',   text:'Lấy free key ↗' },
+    moralis:    { href:'https://admin.moralis.io/register',  text:'Lấy free key ↗' },
+    ankr:       { href:'https://www.ankr.com/rpc/',          text:'Lấy free key ↗' },
+    blockscout: { href:'https://www.blockscout.com',         text:'Docs ↗' },
+  };
+  if (linkEl && links[v]) {
+    linkEl.href = links[v].href;
+    linkEl.textContent = links[v].text;
+  }
+  // Ẩn API key nếu dùng Blockscout
+  wrap.style.display = v === 'blockscout' ? 'none' : 'block';
+}
+function hSetGroup(g, btn) {
+  hGroupBy=g;
+  document.querySelectorAll('.group-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  hRenderTable();
+}
+function hFilterNonZero() {
+  hHideZero=!hHideZero;
+  const btn=document.getElementById('h-filter-btn');
+  btn.textContent=hHideZero?'Show all':'Hide $0';
+  btn.style.color=hHideZero?'#00d4ff':'#888';
+  hRenderTable();
+}
+
+// ---- LOCAL SERVER API ----
+const SERVER = 'http://127.0.0.1:5014';
+let serverOK = false;
+
+async function checkServer() {
+  try {
+    const r = await fetch(SERVER+'/ping', {signal: AbortSignal.timeout(3000)});
+    const d = await r.json();
+    serverOK = d.ok;
+  } catch { serverOK = false; }
+  const txt   = serverOK ? '🟢 Server OK' : '🔴 Server chưa chạy';
+  const color = serverOK ? '#00e676' : '#ff5722';
+  ['h-server-status','lp-server-status'].forEach(id=>{
+    const el=document.getElementById(id);
+    if (el) { el.textContent=txt; el.style.color=color; }
+  });
+  return serverOK;
+}
+
+async function hFetchWallet(wallet) {
+  if (!serverOK) throw new Error('Server chưa chạy — mở CMD: python wallet_server.py');
+  const provider = document.getElementById('h-provider').value;
+  const apiKey   = document.getElementById('h-apikey').value.trim();
+  const nets     = [...hNets];
+
+  const res = await fetch(SERVER+'/balance', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ wallet, networks: nets, provider, api_key: apiKey })
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'Server error');
+  return data.assets || [];
+}
+
+async function hRunCheck() {
+  const wallets = parseAddrs(document.getElementById('h-wallets').value);
+  if (!wallets.length) { alert('Không có địa chỉ ví hợp lệ!'); return; }
+  if (!hNets.size)     { alert('Chọn ít nhất 1 network!'); return; }
+
+  hResults = [];
+  document.getElementById('h-btnCheck').disabled=true;
+  document.getElementById('h-btnCsv').disabled=true;
+  document.getElementById('h-pbar').style.display='block';
+  document.getElementById('h-ptext').style.display='block';
+  document.getElementById('h-tbody').innerHTML='<tr><td colspan="10" class="no-data status-loading">⏳ Đang scan...</td></tr>';
+
+  const minUSD = parseFloat(document.getElementById('h-minusd').value)||0;
+  let totalPortfolio=0, uniqueTokens=new Set(), walletsWithHoldings=0, totalHoldings=0;
+
+  for (let i=0;i<wallets.length;i++) {
+    const wallet=wallets[i];
+    const pct=Math.round((i+1)/wallets.length*100);
+    document.getElementById('h-pfill').style.width=pct+'%';
+    document.getElementById('h-ptext').textContent=`${i+1}/${wallets.length}: ${short(wallet)}`;
+
+    try {
+      const assets = await hFetchWallet(wallet);
+      let walletHasHoldings=false;
+
+      for (const asset of assets) {
+        // Server trả về snake_case: network, token_name, token_symbol, contract, value_usd, price_usd
+        const bal    = parseFloat(asset.balance||0);
+        const balUSD = parseFloat(asset.value_usd||0);
+        if (bal<=0) continue;
+        if (minUSD>0 && balUSD<minUSD) continue;
+
+        totalPortfolio += balUSD;
+        totalHoldings++;
+        walletHasHoldings=true;
+        uniqueTokens.add((asset.token_symbol||'').toUpperCase()+'_'+(asset.contract||''));
+
+        hResults.push({
+          wallet,
+          network:      asset.network      || '',
+          token_name:   asset.token_name   || '',
+          token_symbol: asset.token_symbol || '',
+          contract:     asset.contract     || 'native',
+          balance:      bal,
+          price_usd:    parseFloat(asset.price_usd||0),
+          value_usd:    balUSD,
+          token_type:   asset.token_type   || '',
+          thumbnail:    asset.thumbnail    || '',
+        });
+      }
+      if (walletHasHoldings) walletsWithHoldings++;
+    } catch(e) {
+      hResults.push({
+        wallet, network:'error', token_name:'', token_symbol:'', contract:'',
+        balance:0, price_usd:0, value_usd:0, token_type:'', thumbnail:'', _error:e.message
+      });
+    }
+
+    document.getElementById('h-s1').textContent=i+1;
+    document.getElementById('h-s2').textContent=uniqueTokens.size;
+    document.getElementById('h-s3').textContent=totalHoldings;
+    document.getElementById('h-s4').textContent=fmtUSD(totalPortfolio);
+    document.getElementById('h-s5').textContent=walletsWithHoldings;
+
+    if (i<wallets.length-1) await sleep(400);
+  }
+
+  document.getElementById('h-pbar').style.display='none';
+  document.getElementById('h-ptext').textContent=`✅ Done! ${totalHoldings} holdings từ ${wallets.length} ví`;
+  document.getElementById('h-btnCheck').disabled=false;
+  if (hResults.length) document.getElementById('h-btnCsv').disabled=false;
+  document.getElementById('h-tlabel').textContent=`${totalHoldings} holdings · ${uniqueTokens.size} unique tokens · ${wallets.length} ví`;
+  hRenderTable();
+}
+
+function hRenderTable(searchTerm='') {
+  const tbody=document.getElementById('h-tbody');
+  let data=[...hResults];
+
+  // Filter zero
+  if (hHideZero) data=data.filter(r=>r.value_usd>0);
+
+  // Search
+  if (searchTerm) {
+    const q=searchTerm.toLowerCase();
+    data=data.filter(r=>
+      r.wallet.toLowerCase().includes(q)||
+      r.token_name.toLowerCase().includes(q)||
+      r.token_symbol.toLowerCase().includes(q)||
+      r.contract.toLowerCase().includes(q)
+    );
+  }
+
+  if (!data.length) {
+    tbody.innerHTML='<tr><td colspan="10" class="no-data">Không có dữ liệu</td></tr>';
+    return;
+  }
+
+  // Sort
+  data.sort((a,b)=>b.value_usd-a.value_usd);
+
+  const totalPort = hResults.reduce((s,r)=>s+r.value_usd,0);
+  let html='', prevWallet='', idx=0;
+
+  if (hGroupBy==='wallet') {
+    // Group by wallet
+    const grouped={};
+    data.forEach(r=>{
+      if (!grouped[r.wallet]) grouped[r.wallet]=[];
+      grouped[r.wallet].push(r);
+    });
+    Object.entries(grouped).forEach(([wallet,rows])=>{
+      const wTotal=rows.reduce((s,r)=>s+r.value_usd,0);
+      html+=`<tr class="wallet-row">
+        <td colspan="2">
+          <span class="addr" onclick="copy('${wallet}')" title="${wallet}">${wallet}</span>
+        </td>
+        <td colspan="6" style="color:#4499ff;font-size:11px">
+          ${rows.length} tokens · ${fmtUSD(wTotal)}
+        </td>
+        <td colspan="2"></td>
+      </tr>`;
+      rows.sort((a,b)=>b.value_usd-a.value_usd).forEach(r=>{
+        html+=hBuildTokenRow(++idx, r, totalPort);
+      });
+    });
+  } else {
+    // Group by token
+    const grouped={};
+    data.forEach(r=>{
+      const key=(r.token_symbol||r.token_name||r.contract)+'_'+r.network;
+      if (!grouped[key]) grouped[key]={...r,wallets:[],totalBal:0,totalUSD:0};
+      grouped[key].wallets.push(r.wallet);
+      grouped[key].totalBal+=r.balance;
+      grouped[key].totalUSD+=r.value_usd;
+    });
+    Object.values(grouped).sort((a,b)=>b.totalUSD-a.totalUSD).forEach(g=>{
+      html+=`<tr class="wallet-row">
+        <td colspan="10" style="color:#9c27b0">
+          ${g.token_symbol||'?'} · ${g.token_name||''} · ${g.wallets.length} wallets · ${fmtUSD(g.totalUSD)}
+        </td>
+      </tr>`;
+      data.filter(r=>(r.token_symbol||r.token_name||r.contract)+'_'+r.network===
+          (g.token_symbol||g.token_name||g.contract)+'_'+g.network
+      ).forEach(r=>{ html+=hBuildTokenRow(++idx, r, totalPort); });
+    });
+  }
+
+  tbody.innerHTML=html;
+}
+
+function hBuildTokenRow(idx, r, totalPort) {
+  if (r._error) return `<tr style="opacity:0.4"><td>${idx}</td>
+    <td><span class="addr" onclick="copy('${r.wallet}')">${short(r.wallet)}</span></td>
+    <td colspan="7">—</td>
+    <td><span class="status-err">❌ ${r._error}</span></td></tr>`;
+
+  const netTag=r.network==='base'?'tag-base':r.network==='avalanche'?'tag-avax':'tag-eth';
+  const netLbl=r.network==='base'?'🔵 Base':r.network==='avalanche'?'🔺 Avax':r.network;
+  const pct=totalPort>0?(r.value_usd/totalPort*100).toFixed(1):'0.0';
+  const explorer=r.network==='base'
+    ?`https://basescan.org/address/${r.wallet}`
+    :`https://snowtrace.io/address/${r.wallet}`;
+  const valClass=r.value_usd>=1000?'val-green':r.value_usd<=0?'val-gray':'';
+
+  return `<tr>
+    <td style="color:#555;font-size:11px">${idx}</td>
+    <td><span class="addr" onclick="copy('${r.wallet}')" title="${r.wallet}">${short(r.wallet)}</span>
+    <a class="link-icon" href="${explorer}" target="_blank">↗</a></td>
+    <td><span class="tag ${netTag}">${netLbl}</span></td>
+    <td>
+      ${r.thumbnail?`<img class="token-logo" src="${r.thumbnail}" onerror="this.style.display='none'">`:''}
+      <span style="font-weight:600">${r.token_symbol||'?'}</span>
+      <div style="color:#555;font-size:11px">${r.token_name||''}</div>
+    </td>
+    <td>${r.contract&&r.contract!=='native'
+      ?`<span class="addr" onclick="copy('${r.contract}')" title="${r.contract}">${short(r.contract)}</span>`
+      :`<span style="color:#555;font-size:11px">native</span>`}
+    </td>
+    <td style="font-family:monospace">${fmt(r.balance,4)}</td>
+    <td class="val-usd">${r.price_usd>0?'$'+r.price_usd.toFixed(4):'-'}</td>
+    <td><span class="${valClass}">${fmtUSD(r.value_usd)}</span></td>
+    <td style="color:#555;font-size:11px">${pct}%</td>
+    <td><span class="status-ok">✓</span></td>
+  </tr>`;
+}
+
+let hSearchTimer;
+function hSearch(v) {
+  clearTimeout(hSearchTimer);
+  hSearchTimer=setTimeout(()=>hRenderTable(v),300);
+}
+
+function hSort(v) {
+  if (!hResults.length) return;
+  if (v==='usd_desc') hResults.sort((a,b)=>b.value_usd-a.value_usd);
+  else if (v==='usd_asc') hResults.sort((a,b)=>a.value_usd-b.value_usd);
+  else if (v==='name_asc') hResults.sort((a,b)=>(a.token_symbol||'').localeCompare(b.token_symbol||''));
+  else if (v==='balance_desc') hResults.sort((a,b)=>b.balance-a.balance);
+  hRenderTable(document.querySelector('.search-input')?.value||'');
+}
+
+function hExportCSV() {
+  downloadCSV(hResults.map((r,i)=>({
+    no:i+1, wallet:r.wallet, network:r.network, token_symbol:r.token_symbol,
+    token_name:r.token_name, contract:r.contract, balance:r.balance,
+    price_usd:r.price_usd.toFixed(6), value_usd:r.value_usd.toFixed(2),
+    token_type:r.token_type
+  })), `wallet_holdings_${Date.now()}.csv`);
+}
+
+// Auto check server on load
+window.addEventListener('load', ()=>{
+  checkServer();
+  setInterval(checkServer, 10000);
+  hProviderChange(); // ẩn API key field mặc định
+});
+
+function hClear() {
+  document.getElementById('h-wallets').value='';
+  hResults=[];
+  document.getElementById('h-btnCsv').disabled=true;
+  document.getElementById('h-tbody').innerHTML='<tr><td colspan="10" class="no-data">⬆ Dán địa chỉ ví và bấm SCAN HOLDINGS</td></tr>';
+  ['h-s1','h-s2','h-s3','h-s5'].forEach(id=>document.getElementById(id).textContent='0');
+  document.getElementById('h-s4').textContent='$0';
+  document.getElementById('h-ptext').style.display='none';
+  document.getElementById('h-pbar').style.display='none';
+}
+</script>
+</body>
+</html>

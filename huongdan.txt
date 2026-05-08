@@ -1,0 +1,343 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║              HƯỚNG DẪN SỬ DỤNG — CRYPTO PUMP SCANNER                      ║
+║              D:\bottele\crypto-pump-scanner                                 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+Bot quét tín hiệu pump/dump crypto theo thời gian thực từ Binance + CMC.
+Có dashboard web live tại http://localhost:5012
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ MỤC LỤC
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. Yêu cầu hệ thống
+  2. Cài đặt lần đầu
+  3. Cấu hình .env
+  4. Chạy bot (cách nhanh)
+  5. Chạy từng thành phần riêng
+  6. Dashboard web
+  7. Đọc hiểu tín hiệu
+  8. Cấu hình nâng cao (config.py)
+  9. File log
+ 10. Tắt bot đúng cách
+ 11. Xử lý lỗi thường gặp
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 1. YÊU CẦU HỆ THỐNG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  • Python 3.10 hoặc mới hơn
+  • Internet ổn định (bot dùng WebSocket Binance liên tục)
+  • API key CoinMarketCap (CMC) — miễn phí tại coinmarketcap.com/api
+  • Không cần API key Binance (dùng public endpoint)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 2. CÀI ĐẶT LẦN ĐẦU
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Bước 1 — Mở Command Prompt / PowerShell:
+
+    cd D:\bottele\crypto-pump-scanner
+
+Bước 2 — Tạo virtual environment (khuyến nghị):
+
+    python -m venv venv
+    venv\Scripts\activate
+
+Bước 3 — Cài thư viện:
+
+    pip install -r requirements.txt
+
+  Danh sách thư viện cần cài:
+    httpx==0.27.0
+    websockets==12.0
+    python-dotenv==1.0.1
+    tabulate==0.9.0
+    aiohttp>=3.9.0
+
+Bước 4 — Kiểm tra Python đã đúng phiên bản:
+
+    python --version
+    ► Phải là Python 3.10+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 3. CẤU HÌNH .env
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+File: D:\bottele\crypto-pump-scanner\.env
+
+Nội dung tối thiểu:
+
+    CMC_API_KEY=your_coinmarketcap_api_key_here
+
+Lấy API key CMC miễn phí:
+  1. Truy cập https://coinmarketcap.com/api/
+  2. Đăng ký tài khoản → GET YOUR API KEY NOW
+  3. Gói Free: 10.000 credit/tháng — đủ dùng
+  4. Copy key dán vào .env
+
+LƯU Ý: File .env hiện đã có sẵn key. Nếu key hết hạn/bị block thì đổi key mới.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 4. CHẠY BOT (CÁCH NHANH)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ┌─────────────────────────────────────────────────────┐
+  │   cd D:\bottele\crypto-pump-scanner                 │
+  │   python main.py                                    │
+  └─────────────────────────────────────────────────────┘
+
+Sau đó mở trình duyệt: http://localhost:5012
+
+Bot sẽ tự động:
+  • Kéo danh sách token từ CoinMarketCap (mỗi 5 phút)
+  • Lấy dữ liệu giá/orderbook từ Binance REST (mỗi 30 giây)
+  • Nhận trade tick real-time qua Binance WebSocket (liên tục)
+  • Tính điểm signal mỗi 5 giây
+  • Hiển thị bảng top-5 trên console mỗi 10 giây
+  • Ghi log tín hiệu BUY/SELL vào file mỗi 5 giây
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 5. CHẠY TỪNG THÀNH PHẦN RIÊNG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ► Chỉ chạy Scanner chính (console + dashboard):
+      python main.py
+
+  ► Chỉ chạy Wallet Holdings Server (port 5013):
+      python wallet_server.py
+      — hoặc —
+      start_server.bat   (double-click)
+
+  ► Chỉ chạy LP Checker (standalone HTML tool):
+      Mở file: lp-checker.html  trong trình duyệt
+      (cần wallet_server.py đang chạy)
+
+  ► Xem holdings của ví trên Base/Avalanche:
+      python basescan_holdings.py
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 6. DASHBOARD WEB — http://localhost:5012
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Dashboard tự động refresh mỗi 5 giây. Các phần trên dashboard:
+
+  ┌──────────────────────────────────────────────────────────────┐
+  │  STATS CARDS (hàng trên cùng)                               │
+  │                                                              │
+  │  Tracking    — số token đang theo dõi (mặc định tối đa 40) │
+  │  BUY Signals — số tín hiệu BUY hiện tại (score ≥ 3)        │
+  │  SELL Signals— số tín hiệu SELL hiện tại (score ≤ -1)      │
+  │  Pump Alerts — số token đang bị pump                        │
+  │  Avg Buy Ratio — tâm lý thị trường (>55% = bullish)        │
+  │  Refreshed   — dữ liệu cũ bao nhiêu giây                   │
+  └──────────────────────────────────────────────────────────────┘
+
+  ┌──────────────────────────────────────────────────────────────┐
+  │  BẢNG BUY SIGNALS (xanh lá)                                │
+  │  Các token có tín hiệu mua mạnh nhất                        │
+  │                                                              │
+  │  BẢNG SELL SIGNALS (đỏ)                                    │
+  │  Các token có tín hiệu bán                                  │
+  │                                                              │
+  │  BẢNG ALL TOKENS                                            │
+  │  Toàn bộ token đang track, lọc theo: All / BUY / SELL / PUMP│
+  └──────────────────────────────────────────────────────────────┘
+
+  Cột trong bảng:
+  • Symbol       — tên cặp giao dịch (ví dụ: BTCUSDT)
+  • Score        — điểm tổng hợp (xanh=dương, đỏ=âm)
+  • Price        — giá hiện tại
+  • Mom 1m       — momentum 1 phút (% thay đổi)
+  • Mom 5m       — momentum 5 phút
+  • Buy Ratio    — tỉ lệ lệnh mua / tổng lệnh (thanh màu)
+  • Imbalance    — tỉ lệ bid/ask trong orderbook
+  • Market Cap   — vốn hóa thị trường
+  • Vol 24h      — khối lượng giao dịch 24 giờ
+  • Vol Chg 24h  — % thay đổi volume so với hôm qua
+  • Flag         — PUMP / DUMP / —
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 7. ĐỌC HIỂU TÍN HIỆU
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  HỆ THỐNG CHẤM ĐIỂM (Signal Score):
+
+    +3  Pump detected     — Buy ratio > 70% trong 50 lệnh gần nhất
+    +1  Volume spike      — Volume gần đây > 2x trung bình
+    +1  Momentum dương    — Giá tăng trong 1m hoặc 5m
+    +1  Breakout          — Giá chạm vùng cao nhất 20 nến
+    +1  Order imbalance   — Bid/ask ratio ≥ 2.0 (nhiều lệnh mua)
+    -1  Volume yếu        — Giá tăng nhưng volume thấp
+    -1  Order bear        — Bid/ask ratio ≤ 0.5 (nhiều lệnh bán)
+    -2  Dump detected     — Áp lực bán mạnh
+
+  PHÂN LOẠI:
+    Score ≥ +3  →  BUY  ✅  (xem xét mua)
+    Score ≤ -1  →  SELL ❌  (cẩn thận / short)
+    Còn lại     →  IGNORE   (bỏ qua)
+
+  GHI NHỚ QUAN TRỌNG:
+    • Đây là tín hiệu kỹ thuật, KHÔNG phải khuyến nghị đầu tư
+    • Luôn xác nhận thêm trước khi giao dịch
+    • Buy ratio > 70% = thị trường đang bị mua mạnh
+    • Imbalance > 2.0 = nhiều lệnh bid hơn ask (bullish)
+    • Cooldown: cùng một token chỉ log signal 1 lần mỗi 2 phút
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 8. CẤU HÌNH NÂNG CAO — utils/config.py
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Mở file: D:\bottele\crypto-pump-scanner\utils\config.py
+
+  THÔNG SỐ QUAN TRỌNG CÓ THỂ CHỈNH:
+
+  ┌─────────────────────────────┬────────────────┬──────────────────────────────┐
+  │ Thông số                    │ Mặc định       │ Ý nghĩa                      │
+  ├─────────────────────────────┼────────────────┼──────────────────────────────┤
+  │ MARKET_CAP_MIN              │ $50,000,000    │ Vốn hóa tối thiểu            │
+  │ MARKET_CAP_MAX              │ $500,000,000   │ Vốn hóa tối đa               │
+  │ VOLUME_24H_MIN              │ $5,000,000     │ Volume 24h tối thiểu         │
+  │ MAX_TOKENS                  │ 40             │ Số token tối đa track        │
+  │ PUMP_BUY_RATIO              │ 0.70           │ Ngưỡng buy ratio = pump      │
+  │ VOLUME_SPIKE_MULT           │ 2.0            │ Volume spike bội số          │
+  │ PRICE_SKIP_THRESHOLD        │ 0.10           │ Bỏ qua token đã tăng >10%    │
+  │ SCORE_BUY                   │ 3              │ Điểm tối thiểu để BUY        │
+  │ SIGNAL_COOLDOWN_SECS        │ 120            │ Cooldown giữa 2 signal (giây)│
+  │ TOP_SIGNALS                 │ 5              │ Số token hiển thị console    │
+  │ CMC_REFRESH_INTERVAL        │ 300            │ Refresh CMC mỗi N giây       │
+  │ REST_REFRESH_INTERVAL       │ 30             │ Refresh Binance REST mỗi N s │
+  └─────────────────────────────┴────────────────┴──────────────────────────────┘
+
+  Gợi ý chỉnh cho altcoin nhỏ hơn:
+    MARKET_CAP_MIN = 10_000_000   ($10M)
+    MARKET_CAP_MAX = 200_000_000  ($200M)
+    VOLUME_24H_MIN = 1_000_000    ($1M)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 9. FILE LOG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Thư mục log: D:\bottele\crypto-pump-scanner\logs\
+
+  scanner.log        — log hoạt động của bot (start/stop/error)
+  signals.log        — các tín hiệu BUY/SELL được ghi theo dạng JSON
+
+  Ví dụ một dòng signals.log:
+    2026-03-25 10:00:00 INFO SIGNAL | {"symbol":"XYZUSDT","signal":"BUY",
+      "score":4,"price":0.00234,"momentum_1m":2.15,"momentum_5m":3.8,
+      "buy_ratio":0.76,"pump_detected":true,...}
+
+  Log tự động rotate hàng ngày (giữ file log cũ theo ngày).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 10. TẮT BOT ĐÚNG CÁCH
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Trong cửa sổ console đang chạy bot → nhấn:
+
+    Ctrl + C
+
+  Bot sẽ tự động:
+    • Đóng WebSocket connections
+    • Cancel tất cả async tasks
+    • Flush file log handlers
+    • In thông báo "crypto-pump-scanner stopped cleanly"
+
+  KHÔNG nên đóng thẳng cửa sổ console vì có thể leak connections.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 11. XỬ LÝ LỖI THƯỜNG GẶP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  LỖI: ModuleNotFoundError: No module named 'aiohttp'
+  ► CÁCH SỬA: pip install -r requirements.txt
+
+  ─────────────────────────────────────────────────────────────────
+
+  LỖI: CMC returned empty universe
+  ► CÁCH SỬA:
+    1. Kiểm tra CMC_API_KEY trong .env có đúng không
+    2. Kiểm tra credit CMC còn lại tại coinmarketcap.com/api
+    3. Đổi API key mới nếu hết credit
+
+  ─────────────────────────────────────────────────────────────────
+
+  LỖI: WebSocket task crashed / Connection refused
+  ► CÁCH SỬA: Bot tự reconnect sau 5 giây. Nếu lỗi liên tục:
+    1. Kiểm tra internet
+    2. Kiểm tra Binance có block IP không (dùng VPN nếu cần)
+
+  ─────────────────────────────────────────────────────────────────
+
+  LỖI: Dashboard không load (http://localhost:5012)
+  ► CÁCH SỬA:
+    1. Đảm bảo python main.py đang chạy
+    2. Kiểm tra port 5012 không bị chiếm:
+       netstat -ano | findstr :5012
+    3. Thử: http://127.0.0.1:5012
+
+  ─────────────────────────────────────────────────────────────────
+
+  LỖI: [No actionable signals] — không có tín hiệu
+  ► NGUYÊN NHÂN BÌNH THƯỜNG: thị trường đang không có pump
+  ► Đợi 1-2 phút để REST enrich xong → bắt đầu thấy dữ liệu
+
+  ─────────────────────────────────────────────────────────────────
+
+  LỖI: Port 5013 already in use (wallet_server)
+  ► CÁCH SỬA: Chạy start_server.bat — script tự kill process cũ
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ CẤU TRÚC THƯ MỤC
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  crypto-pump-scanner/
+  ├── main.py               ← ĐIỂM KHỞI CHẠY CHÍNH
+  ├── dashboard.py          ← Web UI (port 5012)
+  ├── wallet_server.py      ← Wallet holdings API (port 5013)
+  ├── basescan_holdings.py  ← Script xem holdings ví
+  ├── lp-checker.html       ← Tool kiểm tra LP pool (mở bằng browser)
+  ├── start_server.bat      ← Khởi động wallet_server nhanh
+  ├── .env                  ← API keys (CMC_API_KEY)
+  ├── requirements.txt      ← Danh sách thư viện Python
+  ├── huongdan.txt          ← File này
+  │
+  ├── data/
+  │   ├── binance_rest.py   ← Lấy giá/orderbook từ Binance REST API
+  │   ├── binance_ws.py     ← Nhận trade tick real-time (WebSocket)
+  │   └── cmc_client.py     ← Kéo danh sách token từ CoinMarketCap
+  │
+  ├── engine/
+  │   ├── signal_engine.py  ← Tính điểm và phân loại BUY/SELL/IGNORE
+  │   ├── pump_detector.py  ← Phát hiện pump/dump pattern
+  │   └── imbalance.py      ← Tính orderbook imbalance
+  │
+  ├── models/
+  │   └── token_state.py    ← Data class lưu trạng thái mỗi token
+  │
+  ├── utils/
+  │   ├── config.py         ← Tất cả thông số cấu hình (chỉnh ở đây)
+  │   └── logger.py         ← Setup logging
+  │
+  └── logs/
+      ├── scanner.log       ← Log hoạt động bot
+      └── signals.log       ← Log tín hiệu BUY/SELL (JSON)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ LỆNH NHANH TÓM TẮT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  # Cài lần đầu
+  cd D:\bottele\crypto-pump-scanner
+  pip install -r requirements.txt
+
+  # Chạy bot
+  python main.py
+
+  # Dashboard
+  Trình duyệt → http://localhost:5012
+
+  # Dừng bot
+  Ctrl + C
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
