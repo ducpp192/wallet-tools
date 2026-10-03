@@ -42,4 +42,37 @@ class Config:
     WS_RECONNECT_DELAY: float = 5
 
 
+    # ── Arkham / SAND flow radar ──────────────────────────────
+    ARKHAM_API_KEY:   str   = os.getenv("ARKHAM_API_KEY", "")
+    ARKHAM_BASE_URL:  str   = os.getenv("ARKHAM_BASE_URL", "https://api.arkm.com")
+    ARKHAM_TIMEOUT:   float = 25.0
+    ARKHAM_MAX_RETRIES: int = 4
+
+    # SAND token contracts. Base/BNB contracts from before the Aug-2026 bridge
+    # exploit are permanently retired — do NOT add them back.
+    SAND_TOKEN_ETH: str = os.getenv(
+        "SAND_TOKEN_ETH", "0x3845badAde8e6dFF049820680d1F14bD3903a5d0"
+    )
+    SAND_TOKEN_POLYGON: str = os.getenv(
+        "SAND_TOKEN_POLYGON", "0xBbba073C31bF03b8ACf7c28EF0738DeCF3695683"
+    )
+
+    # Addresses worth a hard alert whenever they move: exploiter wallets,
+    # compensation treasury, team/vesting. Fill from the official post-mortem.
+    SAND_WATCHLIST: tuple = tuple(
+        a.strip() for a in os.getenv("SAND_WATCHLIST", "").split(",") if a.strip()
+    )
+
+    RADAR_INTERVAL:        float = 180     # seconds between polls
+    RADAR_WINDOW_SECS:     int   = 3600    # lookback per poll
+    RADAR_MIN_USD:         float = 50_000  # ignore dust
+    RADAR_TOP_TRANSFERS:   int   = 5
+    RADAR_BASELINE_WINDOW: int   = 12      # polls kept for the rolling baseline
+
+    RADAR_CEX_IN_USD_WARN:  float = 500_000
+    RADAR_CEX_IN_USD_CRIT:  float = 2_000_000
+    RADAR_BRIDGE_USD_WARN:  float = 100_000
+    RADAR_FLOW_SPIKE_MULT:  float = 3.0
+
+
 cfg = Config()

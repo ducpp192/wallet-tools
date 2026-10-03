@@ -42,3 +42,6 @@ node_modules/
 
 # Claude Code
 .claude/launch.json
+
+# radar history
+data/sand_radar.jsonl
