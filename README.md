@@ -20,6 +20,7 @@ A real-time cryptocurrency signal scanner built with **Python + aiohttp**, featu
 - **`sweep_server.py`** (port 5015) — Multi-chain asset scanner (ETH, Base, BSC, Arbitrum)
 - **`basescan_holdings.py`** — Scan token holdings for any wallet on Base chain
 - **`lp_server.py`** — LP pool checker (Uniswap v2/v3, Aerodrome, SushiSwap)
+- **`onchain_scanner/`** — index & classify 32-byte (`0x`+64hex) words in ERC-20 (Ethereum) & BEP-20/BSC calldata and event logs → SQLite/CSV (read-only data analysis; see `onchain_scanner/README.md`)
 
 ---
 

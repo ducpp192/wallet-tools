@@ -42,3 +42,7 @@ node_modules/
 
 # Claude Code
 .claude/launch.json
+
+# onchain_scanner output
+onchain_scanner_out/
+*.csv
